@@ -13,6 +13,7 @@
 
 // Set this to true to render relevancy when debugging the ranking scores.
 const showRelevancy = false;
+import { Fzf } from "../third_part/fzf-for-js/dist/bundle.js";
 
 // TODO(philc): Consider moving out the "computeRelevancy" function.
 class Suggestion {
@@ -68,7 +69,9 @@ class Suggestion {
     const relevancyHtml = showRelevancy
       ? `<span class='relevancy'>${this.computeRelevancy()}</span>`
       : "";
-    const insertTextClass = this.insertText ? "vomnibarInsertText" : "vomnibarNoInsertText";
+    const insertTextClass = this.insertText
+      ? "vomnibarInsertText"
+      : "vomnibarNoInsertText";
     const insertTextIndicator = "&#8618;"; // A right hooked arrow.
     if (this.insertText && this.isCustomSearch) {
       this.title = this.insertText;
@@ -95,9 +98,9 @@ class Suggestion {
    <span class="vomnibarTitle">${this.highlightQueryTerms(Utils.escapeHtml(this.title))}</span>
  </div>
  <div class="vomnibarBottomHalf">
-  <span class="vomnibarSource vomnibarNoInsertText">${insertTextIndicator}</span>${faviconHtml}<span class="vomnibarUrl">${
-        this.highlightQueryTerms(Utils.escapeHtml(this.shortenUrl()))
-      }</span>
+  <span class="vomnibarSource vomnibarNoInsertText">${insertTextIndicator}</span>${faviconHtml}<span class="vomnibarUrl">${this.highlightQueryTerms(
+    Utils.escapeHtml(this.shortenUrl()),
+  )}</span>
   ${relevancyHtml}
 </div>\
 `;
@@ -166,7 +169,8 @@ class Suggestion {
     // Replace portions of the string from right to left.
     ranges = ranges.sort((a, b) => b[0] - a[0]);
     for (const [start, end] of ranges) {
-      string = string.substring(0, start) +
+      string =
+        string.substring(0, start) +
         `<span class='vomnibarMatch'>${string.substring(start, end)}</span>` +
         string.substring(end);
     }
@@ -232,11 +236,15 @@ Suggestion.stripPatterns = [
   [
     "^https?://www\\.google\\.(com|ca|com\\.au|co\\.uk|ie)/.*[&?]q=",
     "ei gws_rd url ved usg sa usg sig2 bih biw cd aqs ie sourceid es_sm"
-      .split(/\s+/).map((param) => new RegExp(`\&${param}=[^&]+`)),
+      .split(/\s+/)
+      .map((param) => new RegExp(`\&${param}=[^&]+`)),
   ],
 
   // On Google maps, we get a new history entry for every pan and zoom event.
-  ["^https?://www\\.google\\.(com|ca|com\\.au|co\\.uk|ie)/maps/place/.*/@", [new RegExp("/@.*")]],
+  [
+    "^https?://www\\.google\\.(com|ca|com\\.au|co\\.uk|ie)/maps/place/.*/@",
+    [new RegExp("/@.*")],
+  ],
 
   // General replacements; replaces leading and trailing fluff.
   [".", ["^https?://", "\\W+$"].map((re) => new RegExp(re))],
@@ -266,14 +274,19 @@ class BookmarkCompleter {
     );
     if (queryTerms.length > 0) {
       results = this.bookmarks.filter((bookmark) => {
-        const suggestionTitle = usePathAndTitle ? bookmark.pathAndTitle : bookmark.title;
+        const suggestionTitle = usePathAndTitle
+          ? bookmark.pathAndTitle
+          : bookmark.title;
         if (bookmark.hasJavascriptProtocol == null) {
-          bookmark.hasJavascriptProtocol = UrlUtils.hasJavascriptProtocol(bookmark.url);
+          bookmark.hasJavascriptProtocol = UrlUtils.hasJavascriptProtocol(
+            bookmark.url,
+          );
         }
         if (bookmark.hasJavascriptProtocol && bookmark.shortUrl == null) {
           bookmark.shortUrl = "javascript:...";
         }
-        const suggestionUrl = bookmark.shortUrl != null ? bookmark.shortUrl : bookmark.url;
+        const suggestionUrl =
+          bookmark.shortUrl != null ? bookmark.shortUrl : bookmark.url;
         return RankingUtils.matches(queryTerms, suggestionUrl, suggestionTitle);
       });
     } else {
@@ -287,7 +300,7 @@ class BookmarkCompleter {
         title: usePathAndTitle ? bookmark.pathAndTitle : bookmark.title,
         relevancyFunction: this.computeRelevancy,
         shortUrl: bookmark.shortUrl,
-        deDuplicate: (bookmark.shortUrl == null),
+        deDuplicate: bookmark.shortUrl == null,
       });
     });
     return suggestions;
@@ -303,15 +316,18 @@ class BookmarkCompleter {
 
     this.bookmarksTreePromise = chrome.bookmarks.getTree();
     const bookmarksTree = await this.bookmarksTreePromise;
-    this.bookmarks = this.traverseBookmarks(bookmarksTree)
-      .filter((b) => b.url != null);
+    this.bookmarks = this.traverseBookmarks(bookmarksTree).filter(
+      (b) => b.url != null,
+    );
     this.bookmarksTreePromise = null;
   }
 
   // Traverses the bookmark hierarchy, and returns a flattened list of all bookmarks.
   traverseBookmarks(bookmarks) {
     const results = [];
-    bookmarks.forEach((folder) => this.traverseBookmarksRecursive(folder, results));
+    bookmarks.forEach((folder) =>
+      this.traverseBookmarksRecursive(folder, results),
+    );
     return results;
   }
 
@@ -322,16 +338,17 @@ class BookmarkCompleter {
     }
     if (
       bookmark.title &&
-      !((parent.pathAndTitle === "") && ignoredTopLevelBookmarks[bookmark.title])
+      !(parent.pathAndTitle === "" && ignoredTopLevelBookmarks[bookmark.title])
     ) {
-      bookmark.pathAndTitle = parent.pathAndTitle + folderSeparator + bookmark.title;
+      bookmark.pathAndTitle =
+        parent.pathAndTitle + folderSeparator + bookmark.title;
     } else {
       bookmark.pathAndTitle = parent.pathAndTitle;
     }
     results.push(bookmark);
     if (bookmark.children) {
       bookmark.children.forEach((child) =>
-        this.traverseBookmarksRecursive(child, results, bookmark)
+        this.traverseBookmarksRecursive(child, results, bookmark),
       );
     }
   }
@@ -354,8 +371,9 @@ class HistoryCompleter {
 
     let results;
     if (queryTerms.length > 0) {
-      results = HistoryCache.history
-        .filter((entry) => RankingUtils.matches(queryTerms, entry.url, entry.title));
+      results = HistoryCache.history.filter((entry) =>
+        RankingUtils.matches(queryTerms, entry.url, entry.title),
+      );
     } else if (seenTabToOpenCompletionList) {
       // The user has typed <Tab> to open the entire history (sorted by recency).
       results = HistoryCache.history;
@@ -404,11 +422,13 @@ class DomainCompleter {
 
   async filter({ queryTerms, query }) {
     const isMultiWordQuery = /\S\s/.test(query);
-    if ((queryTerms.length === 0) || isMultiWordQuery) return [];
+    if (queryTerms.length === 0 || isMultiWordQuery) return [];
     if (!this.domains) await this.populateDomains();
 
     const firstTerm = queryTerms[0];
-    const domains = Object.keys(this.domains || []).filter((d) => d.includes(firstTerm));
+    const domains = Object.keys(this.domains || []).filter((d) =>
+      d.includes(firstTerm),
+    );
     const domainsAndScores = this.sortDomainsByRelevancy(queryTerms, domains);
     const result = new Suggestion({
       queryTerms,
@@ -424,8 +444,14 @@ class DomainCompleter {
   sortDomainsByRelevancy(queryTerms, domainCandidates) {
     const results = [];
     for (const domain of domainCandidates) {
-      const recencyScore = RankingUtils.recencyScore(this.domains[domain].entry.lastVisitTime || 0);
-      const wordRelevancy = RankingUtils.wordRelevancy(queryTerms, domain, null);
+      const recencyScore = RankingUtils.recencyScore(
+        this.domains[domain].entry.lastVisitTime || 0,
+      );
+      const wordRelevancy = RankingUtils.wordRelevancy(
+        queryTerms,
+        domain,
+        null,
+      );
       const score = (wordRelevancy + Math.max(recencyScore, wordRelevancy)) / 2;
       results.push([domain, score]);
     }
@@ -444,7 +470,8 @@ class DomainCompleter {
   onVisited(newPage) {
     const domain = this.parseDomainAndScheme(newPage.url);
     if (domain) {
-      const slot = this.domains[domain] ||
+      const slot =
+        this.domains[domain] ||
         (this.domains[domain] = { entry: newPage, referenceCount: 0 });
       // We want each entry in our domains hash to point to the most recent History entry for that
       // domain.
@@ -461,7 +488,11 @@ class DomainCompleter {
     } else {
       toRemove.urls.forEach((url) => {
         const domain = this.parseDomainAndScheme(url);
-        if (domain && this.domains[domain] && ((this.domains[domain].referenceCount -= 1) === 0)) {
+        if (
+          domain &&
+          this.domains[domain] &&
+          (this.domains[domain].referenceCount -= 1) === 0
+        ) {
           return delete this.domains[domain];
         }
       });
@@ -470,8 +501,11 @@ class DomainCompleter {
 
   // Return something like "http://www.example.com" or false.
   parseDomainAndScheme(url) {
-    return UrlUtils.urlHasProtocol(url) && !UrlUtils.hasChromeProtocol(url) &&
-      url.split("/", 3).join("/");
+    return (
+      UrlUtils.urlHasProtocol(url) &&
+      !UrlUtils.hasChromeProtocol(url) &&
+      url.split("/", 3).join("/")
+    );
   }
 }
 
@@ -482,7 +516,9 @@ class TabCompleter {
     await BgUtils.tabRecency.init();
     // We search all tabs, not just those in the current window.
     const tabs = await chrome.tabs.query({});
-    const results = tabs.filter((tab) => RankingUtils.matches(queryTerms, tab.url, tab.title));
+    const results = tabs.filter((tab) =>
+      RankingUtils.matches(queryTerms, tab.url, tab.title),
+    );
     const suggestions = results
       .map((tab) => {
         const suggestion = new Suggestion({
@@ -504,14 +540,18 @@ class TabCompleter {
     // subjectively chosen on the grounds that they seem to work pretty well.
     suggestions.forEach(function (suggestion, i) {
       suggestion.relevancy *= 8;
-      suggestion.relevancy /= (i / 4) + 1;
+      suggestion.relevancy /= i / 4 + 1;
     });
     return suggestions;
   }
 
   computeRelevancy(suggestion) {
     if (suggestion.queryTerms.length > 0) {
-      return RankingUtils.wordRelevancy(suggestion.queryTerms, suggestion.url, suggestion.title);
+      return RankingUtils.wordRelevancy(
+        suggestion.queryTerms,
+        suggestion.url,
+        suggestion.title,
+      );
     } else {
       return BgUtils.tabRecency.recencyScore(suggestion.tabId);
     }
@@ -547,7 +587,10 @@ class SearchEngineCompleter {
 
     const searchUrl = userSearchEngine.url;
 
-    const completions = await CompletionSearch.complete(searchUrl, queryTermsWithoutKeyword);
+    const completions = await CompletionSearch.complete(
+      searchUrl,
+      queryTermsWithoutKeyword,
+    );
 
     const makeSuggestion = (query) => {
       const url = UrlUtils.createSearchUrl(query, searchUrl);
@@ -574,7 +617,9 @@ class SearchEngineCompleter {
 
     // This is a suggestion which contains the user's query. It's the "search for exactly what I
     // just typed" option. It should always appear first in the list.
-    const primarySuggestion = makeSuggestion(queryTermsWithoutKeyword.join(" "));
+    const primarySuggestion = makeSuggestion(
+      queryTermsWithoutKeyword.join(" "),
+    );
     primarySuggestion.relevancy = 2;
     primarySuggestion.isPrimarySuggestion = true;
     primarySuggestion.autoSelect = true;
@@ -619,19 +664,22 @@ class MultiCompleter {
   }
 
   async filter(request) {
-    const searchEngineCompleter = this.completers.find((c) => c instanceof SearchEngineCompleter);
+    const searchEngineCompleter = this.completers.find(
+      (c) => c instanceof SearchEngineCompleter,
+    );
     const query = request.query;
     const queryTerms = request.queryTerms;
 
     // The only UX where we support showing results when there are no query terms is via
     // Vomnibar.activateTabSelection, where we show the list of open tabs by recency.
-    const isTabCompleter = this.completers.length == 1 &&
-      this.completers[0] instanceof TabCompleter;
+    const isTabCompleter =
+      this.completers.length == 1 && this.completers[0] instanceof TabCompleter;
     if (queryTerms.length == 0 && !isTabCompleter) {
       return [];
     }
 
-    const queryMatchesUserSearchEngine = searchEngineCompleter?.getUserSearchEngineForQuery(query);
+    const queryMatchesUserSearchEngine =
+      searchEngineCompleter?.getUserSearchEngineForQuery(query);
 
     // If the user's query matches one of their custom search engines, then use only that engine to
     // provide completions for their query.
@@ -686,21 +734,34 @@ class MultiCompleter {
 // Utilities which help us compute a relevancy score for a given item.
 const RankingUtils = {
   // Whether the given things (usually URLs or titles) match any one of the query terms.
+  // Whether the given things (usually URLs or titles) match any one of the query terms using fzf.
   // This is used to prune out irrelevant suggestions before we try to rank them, and for
   // calculating word relevancy. Every term must match at least one thing.
   matches(queryTerms, ...things) {
     for (const term of queryTerms) {
-      const regexp = RegexpCache.get(term);
-      let matchedTerm = false;
-      for (const thing of things) {
-        if (!matchedTerm) {
-          matchedTerm = thing.match(regexp);
-        }
-      }
-      if (!matchedTerm) return false;
+      // Create a fuzzy finder instance with the provided items (things).
+      const fzf = new Fzf(things);
+      // Use `fzf.find()` to search for the term within the items.
+      const results = fzf.find(term);
+
+      // If no results are found for the term, return false.
+      if (results.length === 0) return false;
     }
     return true;
   },
+  // matches(queryTerms, ...things) {
+  //   for (const term of queryTerms) {
+  //     const regexp = RegexpCache.get(term);
+  //     let matchedTerm = false;
+  //     for (const thing of things) {
+  //       if (!matchedTerm) {
+  //         matchedTerm = thing.match(regexp);
+  //       }
+  //     }
+  //     if (!matchedTerm) return false;
+  //   }
+  //   return true;
+  // },
 
   // Weights used for scoring matches.
   matchWeights: {
@@ -757,7 +818,8 @@ const RankingUtils = {
       }
     }
 
-    const maximumPossibleScore = RankingUtils.matchWeights.maximumScore * queryTerms.length;
+    const maximumPossibleScore =
+      RankingUtils.matchWeights.maximumScore * queryTerms.length;
 
     // Normalize scores.
     urlScore /= maximumPossibleScore;
@@ -795,14 +857,16 @@ const RankingUtils = {
       this.oneMonthAgo = 1000 * 60 * 60 * 24 * 30;
     }
     const recency = Date.now() - lastAccessedTime;
-    const recencyDifference = Math.max(0, this.oneMonthAgo - recency) / this.oneMonthAgo;
+    const recencyDifference =
+      Math.max(0, this.oneMonthAgo - recency) / this.oneMonthAgo;
 
     // recencyScore is between [0, 1]. It is 1 when recenyDifference is 0. This quadratic equation
     // will incresingly discount older history entries.
-    let recencyScore = recencyDifference * recencyDifference * recencyDifference;
+    let recencyScore =
+      recencyDifference * recencyDifference * recencyDifference;
 
     // Calibrate recencyScore vis-a-vis word-relevancy scores.
-    return recencyScore *= RankingUtils.matchWeights.recencyCalibrator;
+    return (recencyScore *= RankingUtils.matchWeights.recencyCalibrator);
   },
 
   // Takes the difference of two numbers and returns a number between [0, 1] (the percentage difference).
@@ -844,8 +908,13 @@ const RegexpCache = {
     if (suffix) regexpString = regexpString + suffix;
     // Smartcase: Regexp is case insensitive, unless `string` contains a capital letter (testing
     // `string`, not `regexpString`).
-    return this.cache[regexpString] ||
-      (this.cache[regexpString] = new RegExp(regexpString, Utils.hasUpperCase(string) ? "" : "i"));
+    return (
+      this.cache[regexpString] ||
+      (this.cache[regexpString] = new RegExp(
+        regexpString,
+        Utils.hasUpperCase(string) ? "" : "i",
+      ))
+    );
   },
 };
 
@@ -902,7 +971,11 @@ const HistoryCache = {
   onVisited(newPage) {
     // On Firefox, some history entries do not have titles.
     if (newPage.title == null) newPage.title = "";
-    const i = HistoryCache.binarySearch(newPage, this.history, this.compareHistoryByUrl);
+    const i = HistoryCache.binarySearch(
+      newPage,
+      this.history,
+      this.compareHistoryByUrl,
+    );
     const pageWasFound = this.history[i]?.url == newPage.url;
     if (pageWasFound) {
       this.history[i] = newPage;
@@ -917,8 +990,12 @@ const HistoryCache = {
       this.history = [];
     } else {
       toRemove.urls.forEach((url) => {
-        const i = HistoryCache.binarySearch({ url }, this.history, this.compareHistoryByUrl);
-        if ((i < this.history.length) && (this.history[i].url === url)) {
+        const i = HistoryCache.binarySearch(
+          { url },
+          this.history,
+          this.compareHistoryByUrl,
+        );
+        if (i < this.history.length && this.history[i].url === url) {
           this.history.splice(i, 1);
         }
       });
@@ -927,7 +1004,8 @@ const HistoryCache = {
 };
 
 HistoryCache._onVisitedListener = HistoryCache.onVisited.bind(HistoryCache);
-HistoryCache._onVisitRemovedListener = HistoryCache.onVisitRemoved.bind(HistoryCache);
+HistoryCache._onVisitRemovedListener =
+  HistoryCache.onVisitRemoved.bind(HistoryCache);
 
 // Returns the matching index or the closest matching index if the element is not found. That means
 // you must check the element at the returned index to know whether the element was actually found.

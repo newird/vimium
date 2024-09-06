@@ -19,7 +19,11 @@ const filterCompleter = async (completer, queryTerms) => {
 context("bookmark completer", () => {
   const bookmark3 = { title: "bookmark3", url: "bookmark3.com" };
   const bookmark2 = { title: "bookmark2", url: "bookmark2.com" };
-  const bookmark1 = { title: "bookmark1", url: "bookmark1.com", children: [bookmark2] };
+  const bookmark1 = {
+    title: "bookmark1",
+    url: "bookmark1.com",
+    children: [bookmark2],
+  };
   let completer;
 
   setup(() => {
@@ -35,13 +39,19 @@ context("bookmark completer", () => {
   should("return matching bookmarks when searching", async () => {
     completer.refresh();
     const results = await filterCompleter(completer, ["mark2"]);
-    assert.equal([bookmark2.url], results.map((suggestion) => suggestion.url));
+    assert.equal(
+      [bookmark2.url],
+      results.map((suggestion) => suggestion.url),
+    );
   });
 
   should("return *no* matching bookmarks when there is no match", async () => {
     completer.refresh();
     const results = await filterCompleter(completer, ["does-not-match"]);
-    assert.equal([], results.map((suggestion) => suggestion.url));
+    assert.equal(
+      [],
+      results.map((suggestion) => suggestion.url),
+    );
   });
 
   should("construct bookmark paths correctly", async () => {
@@ -55,7 +65,10 @@ context("bookmark completer", () => {
     async () => {
       completer.refresh();
       const results = await filterCompleter(completer, ["mark2"]);
-      assert.equal(["bookmark2"], results.map((suggestion) => suggestion.title));
+      assert.equal(
+        ["bookmark2"],
+        results.map((suggestion) => suggestion.title),
+      );
     },
   );
 
@@ -64,7 +77,10 @@ context("bookmark completer", () => {
     async () => {
       completer.refresh();
       const results = await filterCompleter(completer, ["/bookmark1", "mark2"]);
-      assert.equal(["/bookmark1/bookmark2"], results.map((suggestion) => suggestion.title));
+      assert.equal(
+        ["/bookmark1/bookmark2"],
+        results.map((suggestion) => suggestion.title),
+      );
     },
   );
 });
@@ -175,8 +191,16 @@ context("HistoryCache", () => {
 });
 
 context("history completer", () => {
-  const history1 = { title: "history1", url: "history1.com", lastVisitTime: hours(1) };
-  const history2 = { title: "history2", url: "history2.com", lastVisitTime: hours(5) };
+  const history1 = {
+    title: "history1",
+    url: "history1.com",
+    lastVisitTime: hours(1),
+  };
+  const history2 = {
+    title: "history2",
+    url: "history2.com",
+    lastVisitTime: hours(5),
+  };
   let completer;
 
   setup(() => {
@@ -191,7 +215,10 @@ context("history completer", () => {
 
   should("return matching history entries when searching", async () => {
     const results = await filterCompleter(completer, ["story1"]);
-    assert.equal([history1.url], results.map((s) => s.url));
+    assert.equal(
+      [history1.url],
+      results.map((s) => s.url),
+    );
   });
 
   should("rank recent results higher than nonrecent results", async () => {
@@ -199,14 +226,29 @@ context("history completer", () => {
     const results = await filterCompleter(completer, ["hist"]);
     results.forEach((result) => result.computeRelevancy());
     results.sort((a, b) => b.relevancy - a.relevancy);
-    assert.equal([history2.url, history1.url], results.map((result) => result.url));
+    assert.equal(
+      [history2.url, history1.url],
+      results.map((result) => result.url),
+    );
   });
 });
 
 context("domain completer", () => {
-  const history1 = { title: "history1", url: "http://history1.com", lastVisitTime: hours(1) };
-  const history2 = { title: "history2", url: "http://history2.com", lastVisitTime: hours(1) };
-  const undef = { title: "history2", url: "http://undefined.net", lastVisitTime: hours(1) };
+  const history1 = {
+    title: "history1",
+    url: "http://history1.com",
+    lastVisitTime: hours(1),
+  };
+  const history2 = {
+    title: "history2",
+    url: "http://history2.com",
+    lastVisitTime: hours(1),
+  };
+  const undef = {
+    title: "history2",
+    url: "http://undefined.net",
+    lastVisitTime: hours(1),
+  };
   let completer = null;
 
   setup(() => {
@@ -223,7 +265,10 @@ context("domain completer", () => {
 
   should("return only a single matching domain", async () => {
     const results = await filterCompleter(completer, ["story"]);
-    assert.equal(["http://history1.com"], results.map((r) => r.url));
+    assert.equal(
+      ["http://history1.com"],
+      results.map((r) => r.url),
+    );
   });
 
   should("pick domains which are more recent", async () => {
@@ -249,8 +294,16 @@ context("domain completer", () => {
 });
 
 context("domain completer (removing entries)", () => {
-  const history1 = { title: "history1", url: "http://history1.com", lastVisitTime: hours(2) };
-  const history2 = { title: "history2", url: "http://history2.com", lastVisitTime: hours(1) };
+  const history1 = {
+    title: "history1",
+    url: "http://history1.com",
+    lastVisitTime: hours(2),
+  };
+  const history2 = {
+    title: "history2",
+    url: "http://history2.com",
+    lastVisitTime: hours(1),
+  };
   const history3 = {
     title: "history2something",
     url: "http://history2.com/something",
@@ -264,8 +317,7 @@ context("domain completer (removing entries)", () => {
     stub(window.chrome, "history", {
       search: (_options) => [history1, history2, history3],
       onVisited: {
-        addListener(_listener) {
-        },
+        addListener(_listener) {},
       },
       onVisitRemoved: {
         addListener(listener) {
@@ -308,11 +360,17 @@ context("domain completer (removing entries)", () => {
     assert.equal(0, result.length);
   });
 
-  should("remove 3 (all) matching domain entries, and do it all at once", async () => {
-    onVisitRemovedListener({ allHistory: false, urls: [history2.url, history1.url, history3.url] });
-    const result = await filterCompleter(completer, ["story"]);
-    assert.equal(0, result.length);
-  });
+  should(
+    "remove 3 (all) matching domain entries, and do it all at once",
+    async () => {
+      onVisitRemovedListener({
+        allHistory: false,
+        urls: [history2.url, history1.url, history3.url],
+      });
+      const result = await filterCompleter(completer, ["story"]);
+      assert.equal(0, result.length);
+    },
+  );
 
   should("remove *all* domain entries", async () => {
     onVisitRemovedListener({ allHistory: true });
@@ -322,7 +380,7 @@ context("domain completer (removing entries)", () => {
 });
 
 context("multi completer", () => {
-  const tabs = [{ url: "tab1.com", title: "tab1", id: 1 },];
+  const tabs = [{ url: "tab1.com", title: "tab1", id: 1 }];
   const tabCompleter = new TabCompleter();
   let multiCompleter;
 
@@ -335,7 +393,7 @@ context("multi completer", () => {
     // Even though a TabCompleter returns results when the query is empty, a MultiCompleter which
     // wraps a TabCompleter should not.
     assert.equal(1, (await filterCompleter(tabCompleter, [])).length);
-    assert.equal([], (await filterCompleter(multiCompleter, [])));
+    assert.equal([], await filterCompleter(multiCompleter, []));
   });
 });
 
@@ -353,13 +411,77 @@ context("tab completer", () => {
 
   should("return tabs by recency when query is empty", async () => {
     const results = await filterCompleter(completer, []);
-    assert.equal(["tab1.com", "tab2.com"], results.map((tab) => tab.url));
+    assert.equal(
+      ["tab1.com", "tab2.com"],
+      results.map((tab) => tab.url),
+    );
   });
 
   should("return matching tabs", async () => {
     const results = await filterCompleter(completer, ["tab2"]);
-    assert.equal(["tab2.com"], results.map((tab) => tab.url));
-    assert.equal([2], results.map((tab) => tab.tabId));
+    assert.equal(
+      ["tab2.com"],
+      results.map((tab) => tab.url),
+    );
+    assert.equal(
+      [2],
+      results.map((tab) => tab.tabId),
+    );
+  });
+});
+
+context("fzf tab completer", () => {
+  const tabs = [
+    { url: "tab1.com", title: "tab1", id: 1 },
+    { url: "tab2.com", title: "tab2", id: 2 },
+    { url: "tab3.com", title: "fexampletab", id: 3 },
+    { url: "tab4.com", title: "fuzzytab", id: 4 },
+  ];
+  let completer;
+
+  setup(() => {
+    stub(chrome.tabs, "query", () => tabs);
+    completer = new TabCompleter(); // Assuming fzf is integrated into this
+  });
+
+  should("return fuzzy-matching tabs using fzf", async () => {
+    const results = await filterCompleter(completer, ["tab"]);
+    assert.equal(
+      ["tab1.com", "tab2.com", "tab4.com", "tab3.com"],
+      results.map((tab) => tab.url),
+    );
+    assert.equal(
+      [1, 2, 4, 3],
+      results.map((tab) => tab.tabId),
+    );
+  });
+
+  should("return exact and fuzzy matches", async () => {
+    const results = await filterCompleter(completer, ["fzz"]);
+    assert.equal(
+      ["tab4.com"],
+      results.map((tab) => tab.url),
+    );
+    assert.equal(
+      [4],
+      results.map((tab) => tab.tabId),
+    );
+  });
+
+  should("return fuzzy matches", async () => {
+    const results = await filterCompleter(completer, ["ft"]);
+    assert.equal(
+      ["tab3.com", "tab4.com"],
+      results.map((tab) => tab.url),
+    );
+    assert.equal(
+      [3, 4],
+      results.map((tab) => tab.tabId),
+    );
+  });
+  should("return no results if no fuzzy match is found", async () => {
+    const results = await filterCompleter(completer, ["nonexistent"]);
+    assert.equal([], results);
   });
 });
 
@@ -382,7 +504,11 @@ context("SearchEngineCompleter", () => {
     stub(window, "fetch", () => createResponse(JSON.stringify(googleResults)));
     const results = await filterCompleter(completer, ["g", "blue"]);
     assert.equal(
-      [googleSearchUrl + "blue", googleSearchUrl + "blue1", googleSearchUrl + "blue2"],
+      [
+        googleSearchUrl + "blue",
+        googleSearchUrl + "blue1",
+        googleSearchUrl + "blue2",
+      ],
       results.map((suggestion) => suggestion.url),
     );
   });
@@ -401,7 +527,9 @@ context("suggestions", () => {
       title: "title <span>",
       relevancyFunction: returns(1),
     });
-    assert.isTrue(suggestion.generateHtml({}).indexOf("title &lt;span&gt;") >= 0);
+    assert.isTrue(
+      suggestion.generateHtml({}).indexOf("title &lt;span&gt;") >= 0,
+    );
   });
 
   should("highlight query words", () => {
@@ -437,7 +565,10 @@ context("suggestions", () => {
       title: "ninjawords",
       relevancyFunction: returns(1),
     });
-    assert.equal(-1, suggestion.generateHtml({}).indexOf("http://ninjawords.com"));
+    assert.equal(
+      -1,
+      suggestion.generateHtml({}).indexOf("http://ninjawords.com"),
+    );
   });
 });
 
@@ -457,8 +588,16 @@ context("RankingUtils.wordRelevancy", () => {
   });
 
   should("score higher in shorter titles", () => {
-    const highScore = RankingUtils.wordRelevancy(["milk"], "a-url", "Milkshakes");
-    const lowScore = RankingUtils.wordRelevancy(["milk"], "a-url", "Milkshakes rocks");
+    const highScore = RankingUtils.wordRelevancy(
+      ["milk"],
+      "a-url",
+      "Milkshakes",
+    );
+    const lowScore = RankingUtils.wordRelevancy(
+      ["milk"],
+      "a-url",
+      "Milkshakes rocks",
+    );
     assert.isTrue(highScore > lowScore);
   });
 
@@ -478,7 +617,11 @@ context("RankingUtils.wordRelevancy", () => {
 
   should("score higher for matching the start of a word (in a title)", () => {
     const lowScore = RankingUtils.wordRelevancy(["te"], "a-url", "Dist racted");
-    const highScore = RankingUtils.wordRelevancy(["te"], "a-url", "Distrac ted");
+    const highScore = RankingUtils.wordRelevancy(
+      ["te"],
+      "a-url",
+      "Distrac ted",
+    );
     assert.isTrue(highScore > lowScore);
   });
 
@@ -520,46 +663,78 @@ context("Suggestion.pushMatchingRanges", () => {
     const ranges = [];
     const [one, two, three] = ["one", "two", "three"];
     const suggestion = new Suggestion([], "", "", "", returns(1));
-    suggestion.pushMatchingRanges(`${one}${two}${three}${two}${one}`, two, ranges);
+    suggestion.pushMatchingRanges(
+      `${one}${two}${three}${two}${one}`,
+      two,
+      ranges,
+    );
     assert.equal(
       2,
-      Utils.zip([ranges, [[3, 6], [11, 14]]]).filter((pair) =>
-        (pair[0][0] === pair[1][0]) && (pair[0][1] === pair[1][1])
+      Utils.zip([
+        ranges,
+        [
+          [3, 6],
+          [11, 14],
+        ],
+      ]).filter(
+        (pair) => pair[0][0] === pair[1][0] && pair[0][1] === pair[1][1],
       ).length,
     );
   });
 
-  should("extract ranges matching term (two matches, one at start of string)", () => {
-    const ranges = [];
-    const [one, two, three] = ["one", "two", "three"];
-    const suggestion = new Suggestion([], "", "", "", returns(1));
-    suggestion.pushMatchingRanges(`${two}${three}${two}${one}`, two, ranges);
-    assert.equal(
-      2,
-      Utils.zip([ranges, [[0, 3], [8, 11]]]).filter((pair) =>
-        (pair[0][0] === pair[1][0]) && (pair[0][1] === pair[1][1])
-      ).length,
-    );
-  });
+  should(
+    "extract ranges matching term (two matches, one at start of string)",
+    () => {
+      const ranges = [];
+      const [one, two, three] = ["one", "two", "three"];
+      const suggestion = new Suggestion([], "", "", "", returns(1));
+      suggestion.pushMatchingRanges(`${two}${three}${two}${one}`, two, ranges);
+      assert.equal(
+        2,
+        Utils.zip([
+          ranges,
+          [
+            [0, 3],
+            [8, 11],
+          ],
+        ]).filter(
+          (pair) => pair[0][0] === pair[1][0] && pair[0][1] === pair[1][1],
+        ).length,
+      );
+    },
+  );
 
-  should("extract ranges matching term (two matches, one at end of string)", () => {
-    const ranges = [];
-    const [one, two, three] = ["one", "two", "three"];
-    const suggestion = new Suggestion([], "", "", "", returns(1));
-    suggestion.pushMatchingRanges(`${one}${two}${three}${two}`, two, ranges);
-    assert.equal(
-      2,
-      Utils.zip([ranges, [[3, 6], [11, 14]]]).filter((pair) =>
-        (pair[0][0] === pair[1][0]) && (pair[0][1] === pair[1][1])
-      ).length,
-    );
-  });
+  should(
+    "extract ranges matching term (two matches, one at end of string)",
+    () => {
+      const ranges = [];
+      const [one, two, three] = ["one", "two", "three"];
+      const suggestion = new Suggestion([], "", "", "", returns(1));
+      suggestion.pushMatchingRanges(`${one}${two}${three}${two}`, two, ranges);
+      assert.equal(
+        2,
+        Utils.zip([
+          ranges,
+          [
+            [3, 6],
+            [11, 14],
+          ],
+        ]).filter(
+          (pair) => pair[0][0] === pair[1][0] && pair[0][1] === pair[1][1],
+        ).length,
+      );
+    },
+  );
 
   should("extract ranges matching term (no matches)", () => {
     const ranges = [];
     const [one, two, three] = ["one", "two", "three"];
     const suggestion = new Suggestion([], "", "", "", returns(1));
-    suggestion.pushMatchingRanges(`${one}${two}${three}${two}${one}`, "does-not-match", ranges);
+    suggestion.pushMatchingRanges(
+      `${one}${two}${three}${two}${one}`,
+      "does-not-match",
+      ranges,
+    );
     assert.equal(0, ranges.length);
   });
 });
@@ -575,7 +750,12 @@ context("RankingUtils", () => {
 
   should("do a case insensitive match on several terms", () => {
     assert.isTrue(
-      RankingUtils.matches(["ari"], "DOES_NOT_MATCH", "DOES_NOT_MATCH_EITHER", "MARio"),
+      RankingUtils.matches(
+        ["ari"],
+        "DOES_NOT_MATCH",
+        "DOES_NOT_MATCH_EITHER",
+        "MARio",
+      ),
     );
   });
 
@@ -605,16 +785,25 @@ context("RankingUtils", () => {
   });
 
   should("do case insensitive word relevancy (not matching)", () => {
-    assert.isTrue(RankingUtils.wordRelevancy(["DOES_NOT_MATCH"], "MARIO", "MARio") === 0.0);
+    assert.isTrue(
+      RankingUtils.wordRelevancy(["DOES_NOT_MATCH"], "MARIO", "MARio") === 0.0,
+    );
   });
 
   should("every query term must match at least one thing (matching)", () => {
-    assert.isTrue(RankingUtils.matches(["cat", "dog"], "catapult", "hound dog"));
+    assert.isTrue(
+      RankingUtils.matches(["cat", "dog"], "catapult", "hound dog"),
+    );
   });
 
-  should("every query term must match at least one thing (not matching)", () => {
-    assert.isTrue(!RankingUtils.matches(["cat", "dog", "wolf"], "catapult", "hound dog"));
-  });
+  should(
+    "every query term must match at least one thing (not matching)",
+    () => {
+      assert.isTrue(
+        !RankingUtils.matches(["cat", "dog", "wolf"], "catapult", "hound dog"),
+      );
+    },
+  );
 });
 
 context("RegexpCache", () => {
@@ -626,13 +815,23 @@ context("RegexpCache", () => {
     assert.isTrue(RegexpCache.get("this") !== RegexpCache.get("that"));
   });
 
-  should("RegexpCache prefix/suffix wrapping is working (positive case)", () => {
-    assert.isTrue(RegexpCache.get("this", "(", ")") === RegexpCache.get("this", "(", ")"));
-  });
+  should(
+    "RegexpCache prefix/suffix wrapping is working (positive case)",
+    () => {
+      assert.isTrue(
+        RegexpCache.get("this", "(", ")") === RegexpCache.get("this", "(", ")"),
+      );
+    },
+  );
 
-  should("RegexpCache prefix/suffix wrapping is working (negative case)", () => {
-    assert.isTrue(RegexpCache.get("this", "(", ")") !== RegexpCache.get("this"));
-  });
+  should(
+    "RegexpCache prefix/suffix wrapping is working (negative case)",
+    () => {
+      assert.isTrue(
+        RegexpCache.get("this", "(", ")") !== RegexpCache.get("this"),
+      );
+    },
+  );
 
   should("search for a string", () => {
     assert.isTrue("hound dog".search(RegexpCache.get("dog")) === 6);
@@ -643,10 +842,14 @@ context("RegexpCache", () => {
   });
 
   should("search for a string with a prefix/suffix (positive case)", () => {
-    assert.isTrue("hound dog".search(RegexpCache.get("dog", "\\b", "\\b")) === 6);
+    assert.isTrue(
+      "hound dog".search(RegexpCache.get("dog", "\\b", "\\b")) === 6,
+    );
   });
 
   should("search for a string with a prefix/suffix (negative case)", () => {
-    assert.isTrue("hound dog".search(RegexpCache.get("do", "\\b", "\\b")) === -1);
+    assert.isTrue(
+      "hound dog".search(RegexpCache.get("do", "\\b", "\\b")) === -1,
+    );
   });
 });
