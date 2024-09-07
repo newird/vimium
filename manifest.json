@@ -41,6 +41,8 @@
     "clipboardRead",
     "clipboardWrite",
     "clipboardRead",
+    "clipboardWrite",
+    "clipboardRead",
     "clipboardWrite"
   ],
   "content_scripts": [
@@ -117,4 +119,3 @@
     }
   }
 }
-
